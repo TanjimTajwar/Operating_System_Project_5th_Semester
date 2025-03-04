@@ -1,23 +1,23 @@
 public class DecryptAESText {
-    public static void main(String[] args) {
-        String str = "Encrypted text here";
-        decryptAESText(str);
+    public static void main(String[] CSECU) {
+        String myString = "Encrypted text here";
+        decryptAESText(myString);
     }
 
-    static void decryptAESText(String str) {
+    static void decryptAESText(String myString) {
         try {
-            int[] ch2 = new int[str.length()];
+            int[] ch2_array = new int[myString.length()];
 
-            for (int i = 0; i < str.length(); i++) {
-                ch2[i] = (int) str.charAt(i) - 4; // Decrypting by subtracting 4
+            for (int a = 0; a < myString.length(); a++) {
+                ch2_array[a] = (int) myString.charAt(a) - 4; // Decrypting by subtracting 4
             }
 
             System.out.print("Decrypted data: ");
-            for (int i = 0; i < str.length(); i++) {
-                System.out.print((char) ch2[i]);
+            for (int a = 0; a < myString.length(); a++) {
+                System.out.print((char) ch2_array[a]);
             }
             System.out.println("\nDecryption complete.");
-        } catch (Exception e) {
+        } catch (Exception myError) {
             System.out.println("Error occurred during decryption.");
         }
     }

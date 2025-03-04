@@ -1,25 +1,25 @@
 import java.io.*;
 
 public class EncryptFile {
-    public static void main(String[] args) {
+    public static void main(String[] CSECU) {
         try {
             String fileName = "original.txt";
             encryptFile(fileName);
-        } catch (IOException e) {
+        } catch (IOException myError) {
             System.out.println("Error occurred while encrypting file.");
         }
     }
 
     static void encryptFile(String fileName) throws IOException {
-        FileReader fr = new FileReader(fileName);
-        FileWriter fw = new FileWriter("encrypted.txt");
-        int data;
+        FileReader file_reading = new FileReader(fileName);
+        FileWriter file_writting = new FileWriter("encrypted.txt");
+        int info;
 
-        while ((data = fr.read()) != -1) {
-            fw.write(data + 4); // Encrypting by adding 4 to each character
+        while ((info = file_reading.read()) != -1) {
+            file_writting.write(info + 4); // Encrypting by adding 4 to each character
         }
-        fr.close();
-        fw.close();
+        file_reading.close();
+        file_writting.close();
 
         System.out.println("File encrypted successfully.");
     }

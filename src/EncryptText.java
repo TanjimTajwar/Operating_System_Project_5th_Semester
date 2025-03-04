@@ -1,33 +1,33 @@
 import java.util.Scanner;
 
 public class EncryptText {
-    public static void main(String[] args) {
+    public static void main(String[] CSECU) {
         encryptText();
     }
 
     static void encryptText() {
         try {
-            Scanner sc = new Scanner(System.in);
+            Scanner CU_Scanner = new Scanner(System.in);
             System.out.print("\nEnter text to encrypt: ");
-            String str = sc.nextLine();
+            String myString = CU_Scanner.nextLine();
 
-            StringBuilder sb = new StringBuilder(str);
-            int[] aryl = new int[sb.length()];
-            int[] ary2 = new int[sb.length()];
-            char[] str2 = new char[sb.length()];
+            StringBuilder string_builder = new StringBuilder(myString);
+            int[] arr1 = new int[string_builder.length()];
+            int[] arr2 = new int[string_builder.length()];
+            char[] mystr2 = new char[string_builder.length()];
 
-            for (int i = 0; i < sb.length(); i++) {
-                aryl[i] = (int) sb.charAt(i);
-                ary2[i] = aryl[i] + 4;
+            for (int a = 0; a < string_builder.length(); a++) {
+                arr1[a] = (int) string_builder.charAt(a);
+                arr2[a] = arr1[a] + 4;
             }
 
             System.out.println("\nEncrypted text: ");
-            for (int i = 0; i < sb.length(); i++) {
-                str2[i] = (char) ary2[i];
-                System.out.print(str2[i]);
+            for (int a = 0; a < string_builder.length(); a++) {
+                mystr2[a] = (char) arr2[a];
+                System.out.print(mystr2[a]);
             }
             System.out.println("\nEncryption complete.");
-        } catch (Exception e) {
+        } catch (Exception myError) {
             System.out.println("Error occurred during encryption.");
         }
     }

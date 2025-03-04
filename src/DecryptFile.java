@@ -1,24 +1,24 @@
 import java.io.*;
 
 public class DecryptFile {
-    public static void main(String[] args) {
+    public static void main(String[] CSECU) {
         try {
             String fileName = "encrypted.txt";
             decryptFile(fileName);
-        } catch (Exception e) {
+        } catch (Exception myError) {
             System.out.println("Error occurred while decrypting file.");
         }
     }
 
     static void decryptFile(String fileName) throws IOException {
-        FileReader fr = new FileReader(fileName);
-        int data;
+        FileReader file_reading = new FileReader(fileName);
+        int info;
         StringBuilder content = new StringBuilder();
 
-        while ((data = fr.read()) != -1) {
-            content.append((char) (data - 4)); // Decrypting the content
+        while ((info = file_reading.read()) != -1) {
+            content.append((char) (info - 4)); // Decrypting the content
         }
-        fr.close();
+        file_reading.close();
 
         System.out.println("Decrypted File Content:");
         System.out.println(content.toString());
