@@ -5,10 +5,11 @@ public class DecryptFile {
         try {
             String fileName = "encrypted.txt";
             decryptFile(fileName);
-        } catch (Exception myError) {
-            System.out.println("Error occurred while decrypting file.");
+        } catch (IOException myError) {
+            System.out.println("Error occurred while decrypting file: " + myError.getMessage());
         }
     }
+    
 
     static void decryptFile(String fileName) throws IOException {
         FileReader file_reading = new FileReader(fileName);

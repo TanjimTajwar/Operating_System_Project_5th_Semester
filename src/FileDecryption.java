@@ -3,51 +3,77 @@ import java.util.Scanner;
 
 public class FileDecryption {
     public static void main(String[] CSECU) {
-        // Call the method for file decryption
-        DecryptFile();
+        Scanner scanner = new Scanner(System.in);
+
+        while (true) { // Infinite loop to keep the program running until user exits
+            // Display menu options
+            System.out.println("\nChoose an option:");
+            System.out.println("1. Text Decryption");
+            System.out.println("2. File Decryption");
+            System.out.println("3. Exit");
+            System.out.print("Enter your choice (1/2/3): ");
+
+            int choice = scanner.nextInt();
+            scanner.nextLine(); // Consume the newline character
+
+            switch (choice) {
+                case 1:
+                    // Text Decryption
+                    System.out.print("\nEnter the encrypted text: ");
+                    String encryptedText = scanner.nextLine();
+                    decryptAESText(encryptedText);
+                    break;
+
+                case 2:
+                    // File Decryption
+                    System.out.print("\nEnter the file name (with .txt extension): ");
+                    String fileName = scanner.nextLine();
+                    decryptFile(fileName);
+                    break;
+
+                case 3:
+                    // Exit the program
+                    System.out.println("\nExiting the program. Goodbye!");
+                    scanner.close();
+                    System.exit(0); // Terminate the program
+
+                default:
+                    System.out.println("Invalid choice. Please enter 1, 2, or 3.");
+            }
+        }
+    }
+
+    // Function to decrypt a text string
+    static void decryptAESText(String encryptedText) {
+        try {
+            StringBuilder decryptedData = new StringBuilder();
+
+            for (int a = 0; a < encryptedText.length(); a++) {
+                decryptedData.append((char) (encryptedText.charAt(a) - 4)); // Decrypting
+            }
+
+            System.out.println("\nDecrypted Text: " + decryptedData);
+            System.out.println("\nDecryption complete.");
+        } catch (Exception e) {
+            System.out.println("Error occurred during text decryption.");
+        }
     }
 
     // Function to decrypt a file
-    static void DecryptFile() {
-        try {
-            String myString;
-            System.out.print("\n\nEnter file name with (.txt) extension: ");
-            Scanner CU_Scanner = new Scanner(System.in);
-            myString = CU_Scanner.nextLine();
+    static void decryptFile(String fileName) {
+        try (FileReader fileReader = new FileReader(fileName)) {
+            StringBuilder content = new StringBuilder();
+            int info;
 
-            FileReader file_reading = new FileReader(myString); // opening encrypted file
-            int length1 = 0, info;
-            
-            // Read the file to determine its length
-            while ((info = file_reading.read()) != -1) {
-                length1++;
-            }
-            file_reading.close();
-
-            file_reading = new FileReader(myString);
-            int[] ch2_array = new int[length1];
-            int a = 0;
-            
-            // Read the file's original data
-            while ((info = file_reading.read()) != -1) {
-                ch2_array[a++] = info;
+            while ((info = fileReader.read()) != -1) {
+                content.append((char) (info - 4)); // Decrypting
             }
 
-            // Decrypt the data
-            for (a = 0; a < length1; a++) {
-                ch2_array[a] = ch2_array[a] - 4;
-            }
-
-            // Print decrypted data
-            System.out.print("\nDecrypted data: ");
-            for (a = 0; a < length1; a++) {
-                System.out.print((char) ch2_array[a]);
-            }
-
+            System.out.println("\nDecrypted File Content:");
+            System.out.println(content);
             System.out.println("\nDecryption complete.");
-            file_reading.close();
-        } catch (IOException myError) {
-            System.out.println("An error occurred while reading the file.");
+        } catch (IOException e) {
+            System.out.println("Error occurred while reading the file: " + e.getMessage());
         }
     }
 }
