@@ -26,9 +26,28 @@ public class EncryptText {
                 mystr2[a] = (char) arr2[a];
                 System.out.print(mystr2[a]);
             }
-            System.out.println("\nEncryption complete.");
+            
+            // Display success message
+            System.out.println("\n\n==========================================");
+            System.out.println("       Text Successfully Encrypted!");
+            System.out.println("==========================================");
+            System.out.println("\nPress Enter to return to Main Menu...");
+            CU_Scanner.nextLine(); // Wait for user to press Enter
+            
+            // Return to MainMenu
+            MainMenu.main(null);
+            
         } catch (Exception myError) {
-            System.out.println("Error occurred during encryption.");
+            System.out.println("Error occurred during encryption: " + myError.getMessage());
+            
+            // Return to MainMenu after error
+            System.out.println("\nPress Enter to return to Main Menu...");
+            try {
+                new Scanner(System.in).nextLine(); // Wait for user to press Enter
+                MainMenu.main(null);
+            } catch (Exception e) {
+                System.out.println("Error returning to main menu: " + e.getMessage());
+            }
         }
     }
 }

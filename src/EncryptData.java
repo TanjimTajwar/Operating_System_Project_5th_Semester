@@ -32,9 +32,27 @@ public class EncryptData {
                 System.out.print(mystr2[a]);
             }
 
-            System.out.println("\nEncryption complete.");
-        } catch (InterruptedException myError) {
-            System.out.println("An error occurred during encryption.");
+            // Display success message
+            System.out.println("\n\n==========================================");
+            System.out.println("       Text Successfully Encrypted!");
+            System.out.println("==========================================");
+            System.out.println("\nPress Enter to return to Main Menu...");
+            CU_Scanner.nextLine(); // Wait for user to press Enter
+            
+            // Return to MainMenu
+            MainMenu.main(null);
+            
+        } catch (Exception myError) {
+            System.out.println("An error occurred during encryption: " + myError.getMessage());
+            
+            // Return to MainMenu after error
+            System.out.println("\nPress Enter to return to Main Menu...");
+            try {
+                new Scanner(System.in).nextLine(); // Wait for user to press Enter
+                MainMenu.main(null);
+            } catch (Exception e) {
+                System.out.println("Error returning to main menu: " + e.getMessage());
+            }
         }
     }
 }
