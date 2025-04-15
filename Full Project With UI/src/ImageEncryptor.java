@@ -129,7 +129,7 @@ public class ImageEncryptor extends JFrame {
 
             // Save encrypted image
             BufferedImage encryptedImage = convertBytesToImage(encryptedData, originalImage.getWidth(), originalImage.getHeight());
-            BufferedImage blurredImage = applyBlurEffect(encryptedImage, 90);
+            BufferedImage blurredImage = applyBlurEffect(encryptedImage, 100);
 
             String outputPath = selectedImagePath + "_encrypted.png";
             ImageIO.write(blurredImage, "png", new File(outputPath));
@@ -186,7 +186,7 @@ public class ImageEncryptor extends JFrame {
         return img.getScaledInstance(width, height, Image.SCALE_SMOOTH);
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] CSECU) {
         SwingUtilities.invokeLater(() -> new ImageEncryptor().setVisible(true));
     }
 }
