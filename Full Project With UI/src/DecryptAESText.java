@@ -2,14 +2,21 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.border.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class DecryptAESText extends JFrame {
     private JTextArea inputArea;
     private JTextArea outputArea;
-    private Color primaryColor = new Color(41, 128, 185);
-    private Color secondaryColor = new Color(52, 152, 219);
-    private Color backgroundColor = new Color(0, 0, 255);
-    private Color textColor = new Color(0, 0, 0);
+    private Color primaryColor = new Color(52, 152, 219);  // Modern blue
+    private Color secondaryColor = new Color(46, 204, 113);  // Modern green
+    private Color backgroundColor = new Color(236, 240, 241);  // Light gray background
+    private Color textColor = new Color(44, 62, 80);  // Dark blue text
+    private Color buttonHoverColor = new Color(41, 128, 185);  // Darker blue for hover
 
     public DecryptAESText() {
         setTitle("Text Decryption");
@@ -103,34 +110,35 @@ public class DecryptAESText extends JFrame {
         add(mainPanel);
     }
 
-    private JLabel createStyledLabel(String text, int size) {
+    private JLabel createStyledLabel(String text, int fontSize) {
         JLabel label = new JLabel(text);
-        label.setFont(new Font("Segoe UI", Font.BOLD, size));
+        label.setFont(new Font("Segoe UI", Font.BOLD, fontSize));
         label.setForeground(textColor);
         return label;
     }
 
     private JButton createStyledButton(String text) {
-        JButton button = new JButton(text);
-        button.setPreferredSize(new Dimension(120, 35));
-        button.setBackground(primaryColor);
-        button.setForeground(Color.BLACK);
+        JButton button = new JButton(text) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                if (getModel().isPressed()) {
+                    g.setColor(buttonHoverColor);
+                } else if (getModel().isRollover()) {
+                    g.setColor(secondaryColor);
+                } else {
+                    g.setColor(primaryColor);
+                }
+                g.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
+                super.paintComponent(g);
+            }
+        };
+        button.setContentAreaFilled(false);
+        button.setBorderPainted(false);
         button.setFocusPainted(false);
-        button.setBorder(new RoundedBorder(15));
+        button.setForeground(Color.WHITE);
         button.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        button.setPreferredSize(new Dimension(150, 40));
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        
-        button.addMouseListener(new MouseAdapter() {
-            public void mouseEntered(MouseEvent e) {
-                button.setBackground(secondaryColor);
-                button.repaint();
-            }
-            public void mouseExited(MouseEvent e) {
-                button.setBackground(primaryColor);
-                button.repaint();
-            }
-        });
-        
         return button;
     }
 
@@ -153,18 +161,40 @@ public class DecryptAESText extends JFrame {
 
         try {
             int[] ch2_array = new int[input.length()];
-
-            for (int a = 0; a < input.length(); a++) {
-                ch2_array[a] = (int) input.charAt(a) - 4; // Decrypting by subtracting 4
+            
+            // Calculate chunk size for multi-threading
+            int chunkSize = 1000; // Process 1000 characters at a time
+            int numChunks = (int) Math.ceil((double) input.length() / chunkSize);
+            
+            // Create thread pool for parallel processing
+            ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+            List<Future<char[]>> futures = new ArrayList<>();
+            
+            // Process chunks in parallel
+            for (int i = 0; i < numChunks; i++) {
+                final int start = i * chunkSize;
+                final int end = Math.min(start + chunkSize, input.length());
+                futures.add(executor.submit(() -> {
+                    char[] chunk = new char[end - start];
+                    for (int j = start; j < end; j++) {
+                        ch2_array[j] = (int) input.charAt(j) - 4;
+                        chunk[j - start] = (char) ch2_array[j];
+                    }
+                    return chunk;
+                }));
             }
-
+            
+            // Combine decrypted chunks
             StringBuilder decryptedText = new StringBuilder();
-            for (int a = 0; a < input.length(); a++) {
-                decryptedText.append((char) ch2_array[a]);
+            for (Future<char[]> future : futures) {
+                decryptedText.append(future.get());
             }
             
-            outputArea.setText(decryptedText.toString());
+            executor.shutdown();
+            executor.awaitTermination(1, TimeUnit.MINUTES);
             
+            // Update UI
+            outputArea.setText(decryptedText.toString());
             JOptionPane.showMessageDialog(this,
                 "Text successfully decrypted!",
                 "Success",

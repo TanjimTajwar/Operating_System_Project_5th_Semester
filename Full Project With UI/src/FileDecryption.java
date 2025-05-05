@@ -7,10 +7,11 @@ import java.io.*;
 public class FileDecryption extends JFrame {
     private JTextArea outputArea;
     private JPasswordField keyField;
-    private Color primaryColor = new Color(41, 128, 185);
-    private Color secondaryColor = new Color(52, 152, 219);
-    private Color backgroundColor = new Color(0, 0, 255);  // Blue background
-    private Color textColor = new Color(0, 0, 0);  // Black text
+    private Color primaryColor = new Color(52, 152, 219);  // Modern blue
+    private Color secondaryColor = new Color(46, 204, 113);  // Modern green
+    private Color backgroundColor = new Color(236, 240, 241);  // Light gray background
+    private Color textColor = new Color(44, 62, 80);  // Dark blue text
+    private Color buttonHoverColor = new Color(41, 128, 185);  // Darker blue for hover
 
     public FileDecryption() {
         setTitle("Decrypt Data");
@@ -81,34 +82,35 @@ public class FileDecryption extends JFrame {
         add(mainPanel);
     }
 
-    private JLabel createStyledLabel(String text, int size) {
+    private JLabel createStyledLabel(String text, int fontSize) {
         JLabel label = new JLabel(text);
-        label.setFont(new Font("Segoe UI", Font.BOLD, size));
+        label.setFont(new Font("Segoe UI", Font.BOLD, fontSize));
         label.setForeground(textColor);
         return label;
     }
 
     private JButton createStyledButton(String text) {
-        JButton button = new JButton(text);
-        button.setPreferredSize(new Dimension(120, 35));
-        button.setBackground(primaryColor);
-        button.setForeground(Color.BLACK);
+        JButton button = new JButton(text) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                if (getModel().isPressed()) {
+                    g.setColor(buttonHoverColor);
+                } else if (getModel().isRollover()) {
+                    g.setColor(secondaryColor);
+                } else {
+                    g.setColor(primaryColor);
+                }
+                g.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
+                super.paintComponent(g);
+            }
+        };
+        button.setContentAreaFilled(false);
+        button.setBorderPainted(false);
         button.setFocusPainted(false);
-        button.setBorder(new RoundedBorder(15));
+        button.setForeground(Color.WHITE);
         button.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        button.setPreferredSize(new Dimension(150, 40));
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        
-        button.addMouseListener(new MouseAdapter() {
-            public void mouseEntered(MouseEvent e) {
-                button.setBackground(secondaryColor);
-                button.repaint();
-            }
-            public void mouseExited(MouseEvent e) {
-                button.setBackground(primaryColor);
-                button.repaint();
-            }
-        });
-        
         return button;
     }
 
@@ -116,6 +118,7 @@ public class FileDecryption extends JFrame {
         JPasswordField passwordField = new JPasswordField();
         passwordField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         passwordField.setBorder(new RoundedBorder(10));
+        passwordField.setBackground(Color.WHITE);
         return passwordField;
     }
 

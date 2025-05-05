@@ -2,14 +2,21 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.border.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class EncryptText extends JFrame {
     private JTextArea inputArea;
     private JTextArea outputArea;
-    private Color primaryColor = new Color(41, 128, 185);
-    private Color secondaryColor = new Color(52, 152, 219);
-    private Color backgroundColor = new Color(0, 0, 255);
-    private Color textColor = new Color(0, 0, 0);
+    private Color primaryColor = new Color(52, 152, 219);  // Modern blue
+    private Color secondaryColor = new Color(46, 204, 113);  // Modern green
+    private Color backgroundColor = new Color(236, 240, 241);  // Light gray background
+    private Color textColor = new Color(44, 62, 80);  // Dark blue text
+    private Color buttonHoverColor = new Color(41, 128, 185);  // Darker blue for hover
 
     public EncryptText() {
         setTitle("Text Encryption");
@@ -103,35 +110,52 @@ public class EncryptText extends JFrame {
         add(mainPanel);
     }
 
-    private JLabel createStyledLabel(String text, int size) {
+    private JLabel createStyledLabel(String text, int fontSize) {
         JLabel label = new JLabel(text);
-        label.setFont(new Font("Segoe UI", Font.BOLD, size));
+        label.setFont(new Font("Segoe UI", Font.BOLD, fontSize));
         label.setForeground(textColor);
         return label;
     }
 
     private JButton createStyledButton(String text) {
-        JButton button = new JButton(text);
-        button.setPreferredSize(new Dimension(120, 35));
-        button.setBackground(primaryColor);
-        button.setForeground(Color.BLACK);
+        JButton button = new JButton(text) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                if (getModel().isPressed()) {
+                    g.setColor(buttonHoverColor);
+                } else if (getModel().isRollover()) {
+                    g.setColor(secondaryColor);
+                } else {
+                    g.setColor(primaryColor);
+                }
+                g.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
+                super.paintComponent(g);
+            }
+        };
+        button.setContentAreaFilled(false);
+        button.setBorderPainted(false);
         button.setFocusPainted(false);
-        button.setBorder(new RoundedBorder(15));
+        button.setForeground(Color.WHITE);
         button.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        button.setPreferredSize(new Dimension(150, 40));
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        
-        button.addMouseListener(new MouseAdapter() {
-            public void mouseEntered(MouseEvent e) {
-                button.setBackground(secondaryColor);
-                button.repaint();
-            }
-            public void mouseExited(MouseEvent e) {
-                button.setBackground(primaryColor);
-                button.repaint();
-            }
-        });
-        
         return button;
+    }
+
+    private JTextField createStyledTextField() {
+        JTextField textField = new JTextField();
+        textField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        textField.setBorder(new RoundedBorder(10));
+        textField.setBackground(Color.WHITE);
+        return textField;
+    }
+
+    private JPasswordField createStyledPasswordField() {
+        JPasswordField passwordField = new JPasswordField();
+        passwordField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        passwordField.setBorder(new RoundedBorder(10));
+        passwordField.setBackground(Color.WHITE);
+        return passwordField;
     }
 
     private Border createStyledBorder() {
@@ -157,19 +181,40 @@ public class EncryptText extends JFrame {
             int[] arr2 = new int[stringBuilder.length()];
             char[] mystr2 = new char[stringBuilder.length()];
 
-            for (int a = 0; a < stringBuilder.length(); a++) {
-                arr1[a] = (int) stringBuilder.charAt(a);
-                arr2[a] = arr1[a] + 4;
+            // Calculate chunk size for multi-threading
+            int chunkSize = 1000; // Process 1000 characters at a time
+            int numChunks = (int) Math.ceil((double) stringBuilder.length() / chunkSize);
+            
+            // Create thread pool for parallel processing
+            ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+            List<Future<char[]>> futures = new ArrayList<>();
+            
+            // Process chunks in parallel
+            for (int i = 0; i < numChunks; i++) {
+                final int start = i * chunkSize;
+                final int end = Math.min(start + chunkSize, stringBuilder.length());
+                futures.add(executor.submit(() -> {
+                    char[] chunk = new char[end - start];
+                    for (int j = start; j < end; j++) {
+                        arr1[j] = (int) stringBuilder.charAt(j);
+                        arr2[j] = arr1[j] + 4;
+                        chunk[j - start] = (char) arr2[j];
+                    }
+                    return chunk;
+                }));
             }
-
+            
+            // Combine encrypted chunks
             StringBuilder encryptedText = new StringBuilder();
-            for (int a = 0; a < stringBuilder.length(); a++) {
-                mystr2[a] = (char) arr2[a];
-                encryptedText.append(mystr2[a]);
+            for (Future<char[]> future : futures) {
+                encryptedText.append(future.get());
             }
             
-            outputArea.setText(encryptedText.toString());
+            executor.shutdown();
+            executor.awaitTermination(1, TimeUnit.MINUTES);
             
+            // Update UI
+            outputArea.setText(encryptedText.toString());
             JOptionPane.showMessageDialog(this,
                 "Text successfully encrypted!",
                 "Success",

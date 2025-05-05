@@ -1,17 +1,27 @@
-import javax.swing.*;
 import java.awt.*;
-import java.awt.event.*;
-import javax.swing.border.*;
 import java.awt.image.*;
-import javax.imageio.ImageIO;
 import java.io.*;
 import java.util.Arrays;
+import javax.imageio.ImageIO;
+import javax.swing.*;
+import javax.swing.border.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class ImageEncryptor extends JFrame {
     private JLabel imagePreviewLabel;
     private JPasswordField keyField;
     private String selectedImagePath;
     private BufferedImage originalImage;
+    private Color primaryColor = new Color(52, 152, 219);  // Modern blue
+    private Color secondaryColor = new Color(46, 204, 113);  // Modern green
+    private Color backgroundColor = new Color(236, 240, 241);  // Light gray background
+    private Color textColor = new Color(44, 62, 80);  // Dark blue text
+    private Color buttonHoverColor = new Color(41, 128, 185);  // Darker blue for hover
     
     public ImageEncryptor() {
         setTitle("Image Encryption");
@@ -29,16 +39,20 @@ public class ImageEncryptor extends JFrame {
 
         // Create main panel
         JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
+        mainPanel.setBackground(backgroundColor);
         mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
         // Create title
-        JLabel titleLabel = new JLabel("Image Encryption", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        JLabel titleLabel = createStyledLabel("Image Encryption", 24);
+        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
         mainPanel.add(titleLabel, BorderLayout.NORTH);
 
         // Create center panel for image preview
         JPanel centerPanel = new JPanel(new BorderLayout());
-        centerPanel.setBorder(BorderFactory.createTitledBorder("Image Preview"));
+        centerPanel.setBackground(backgroundColor);
+        centerPanel.setBorder(BorderFactory.createTitledBorder(
+            createStyledBorder(), "Image Preview", TitledBorder.LEFT, TitledBorder.TOP,
+            new Font("Segoe UI", Font.BOLD, 14), textColor));
 
         imagePreviewLabel = new JLabel("No image selected", SwingConstants.CENTER);
         imagePreviewLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
@@ -46,23 +60,26 @@ public class ImageEncryptor extends JFrame {
 
         // Create bottom panel for key input and buttons
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
+        bottomPanel.setBackground(backgroundColor);
 
         JLabel keyLabel = new JLabel("Encryption Key (16 chars):");
-        keyField = new JPasswordField(16);
+        keyLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        keyField = createStyledPasswordField();
         keyField.setPreferredSize(new Dimension(200, 30));
 
-        JButton browseButton = new JButton("Browse Image");
+        JButton browseButton = createStyledButton("Browse Image");
         browseButton.addActionListener(e -> browseImage());
 
-        JButton encryptButton = new JButton("Encrypt");
+        JButton encryptButton = createStyledButton("Encrypt");
         encryptButton.addActionListener(e -> encryptImage());
 
-        JButton clearButton = new JButton("Clear");
+        JButton clearButton = createStyledButton("Clear");
         clearButton.addActionListener(e -> {
             imagePreviewLabel.setText("No image selected");
             imagePreviewLabel.setIcon(null);
             keyField.setText("");
             selectedImagePath = null;
+            originalImage = null;
         });
 
         bottomPanel.add(keyLabel);
@@ -96,11 +113,15 @@ public class ImageEncryptor extends JFrame {
             selectedImagePath = fileChooser.getSelectedFile().getAbsolutePath();
             try {
                 originalImage = ImageIO.read(new File(selectedImagePath));
-                ImageIcon imageIcon = new ImageIcon(scaleImage(originalImage, 400, 300));
-                imagePreviewLabel.setIcon(imageIcon);
-                imagePreviewLabel.setText("");
+                if (originalImage != null) {
+                    ImageIcon imageIcon = new ImageIcon(scaleImage(originalImage, 400, 300));
+                    imagePreviewLabel.setIcon(imageIcon);
+                    imagePreviewLabel.setText("");
+                } else {
+                    JOptionPane.showMessageDialog(this, "Error loading image!", "Error", JOptionPane.ERROR_MESSAGE);
+                }
             } catch (IOException e) {
-                JOptionPane.showMessageDialog(this, "Error loading image!", "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Error loading image: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -118,59 +139,94 @@ public class ImageEncryptor extends JFrame {
         }
 
         try {
-            // Encrypt image data (XOR with key)
-            byte[] keyBytes = key.getBytes();
+            // Convert image to bytes
             byte[] imageData = convertImageToBytes(originalImage);
-            byte[] encryptedData = new byte[imageData.length];
-
-            for (int i = 0; i < imageData.length; i++) {
-                encryptedData[i] = (byte) (imageData[i] ^ keyBytes[i % keyBytes.length]);
+            
+            // Calculate chunk size for multi-threading
+            int chunkSize = 1024 * 1024; // 1MB chunks
+            int numChunks = (int) Math.ceil((double) imageData.length / chunkSize);
+            
+            // Create thread pool for parallel processing
+            ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+            List<Future<byte[]>> futures = new ArrayList<>();
+            
+            // Process chunks in parallel
+            for (int i = 0; i < numChunks; i++) {
+                final int start = i * chunkSize;
+                final int end = Math.min(start + chunkSize, imageData.length);
+                futures.add(executor.submit(() -> {
+                    byte[] chunk = Arrays.copyOfRange(imageData, start, end);
+                    byte[] keyBytes = key.getBytes();
+                    byte[] encryptedChunk = new byte[chunk.length];
+                    
+                    for (int j = 0; j < chunk.length; j++) {
+                        encryptedChunk[j] = (byte) (chunk[j] ^ keyBytes[j % keyBytes.length]);
+                    }
+                    
+                    return encryptedChunk;
+                }));
             }
-
-            // Save encrypted image
+            
+            // Combine encrypted chunks
+            byte[] encryptedData = new byte[imageData.length];
+            int currentPos = 0;
+            for (Future<byte[]> future : futures) {
+                byte[] chunk = future.get();
+                System.arraycopy(chunk, 0, encryptedData, currentPos, chunk.length);
+                currentPos += chunk.length;
+            }
+            
+            executor.shutdown();
+            executor.awaitTermination(1, TimeUnit.MINUTES);
+            
+            // Create and save encrypted image
             BufferedImage encryptedImage = convertBytesToImage(encryptedData, originalImage.getWidth(), originalImage.getHeight());
-            BufferedImage blurredImage = applyBlurEffect(encryptedImage, 100);
+            BufferedImage blurredImage = applyBlurEffect(encryptedImage, 50);
 
-            String outputPath = selectedImagePath + "_encrypted.png";
+            String outputPath = selectedImagePath.substring(0, selectedImagePath.lastIndexOf('.')) + "_encrypted.png";
             ImageIO.write(blurredImage, "png", new File(outputPath));
 
+            // Update preview
             imagePreviewLabel.setIcon(new ImageIcon(scaleImage(blurredImage, 400, 300)));
-
-            JOptionPane.showMessageDialog(this, "Image encrypted and saved as: " + outputPath, "Success", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, 
+                "Image encrypted and saved as: " + outputPath, 
+                "Success", 
+                JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error during encryption: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, 
+                "Error during encryption: " + e.getMessage(), 
+                "Error", 
+                JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private byte[] convertImageToBytes(BufferedImage image) {
         int width = image.getWidth();
         int height = image.getHeight();
+        int[] pixels = new int[width * height];
+        image.getRGB(0, 0, width, height, pixels, 0, width);
+        
         byte[] data = new byte[width * height * 3];
-
         int index = 0;
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                int rgb = image.getRGB(x, y);
-                data[index++] = (byte) ((rgb >> 16) & 0xFF);
-                data[index++] = (byte) ((rgb >> 8) & 0xFF);
-                data[index++] = (byte) (rgb & 0xFF);
-            }
+        for (int pixel : pixels) {
+            data[index++] = (byte) ((pixel >> 16) & 0xFF); // Red
+            data[index++] = (byte) ((pixel >> 8) & 0xFF);  // Green
+            data[index++] = (byte) (pixel & 0xFF);         // Blue
         }
         return data;
     }
 
     private BufferedImage convertBytesToImage(byte[] data, int width, int height) {
         BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        int[] pixels = new int[width * height];
         int index = 0;
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                int r = data[index++] & 0xFF;
-                int g = data[index++] & 0xFF;
-                int b = data[index++] & 0xFF;
-                int rgb = (r << 16) | (g << 8) | b;
-                image.setRGB(x, y, rgb);
-            }
+        for (int i = 0; i < pixels.length; i++) {
+            int r = data[index++] & 0xFF;
+            int g = data[index++] & 0xFF;
+            int b = data[index++] & 0xFF;
+            pixels[i] = (r << 16) | (g << 8) | b;
         }
+        image.setRGB(0, 0, width, height, pixels, 0, width);
         return image;
     }
 
@@ -183,10 +239,83 @@ public class ImageEncryptor extends JFrame {
     }
 
     private Image scaleImage(BufferedImage img, int width, int height) {
+        if (img == null) return null;
         return img.getScaledInstance(width, height, Image.SCALE_SMOOTH);
+    }
+
+    private JButton createStyledButton(String text) {
+        JButton button = new JButton(text) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                if (getModel().isPressed()) {
+                    g.setColor(buttonHoverColor);
+                } else if (getModel().isRollover()) {
+                    g.setColor(secondaryColor);
+                } else {
+                    g.setColor(primaryColor);
+                }
+                g.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
+                super.paintComponent(g);
+            }
+        };
+        button.setContentAreaFilled(false);
+        button.setBorderPainted(false);
+        button.setFocusPainted(false);
+        button.setForeground(Color.WHITE);
+        button.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        button.setPreferredSize(new Dimension(150, 40));
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        return button;
+    }
+
+    private JLabel createStyledLabel(String text, int fontSize) {
+        JLabel label = new JLabel(text);
+        label.setFont(new Font("Segoe UI", Font.BOLD, fontSize));
+        label.setForeground(textColor);
+        return label;
+    }
+
+    private JTextField createStyledTextField() {
+        JTextField textField = new JTextField();
+        textField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        textField.setBorder(new RoundedBorder(10));
+        textField.setBackground(Color.WHITE);
+        return textField;
+    }
+
+    private JPasswordField createStyledPasswordField() {
+        JPasswordField passwordField = new JPasswordField();
+        passwordField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        passwordField.setBorder(new RoundedBorder(10));
+        passwordField.setBackground(Color.WHITE);
+        return passwordField;
+    }
+
+    private Border createStyledBorder() {
+        return BorderFactory.createCompoundBorder(
+            new RoundedBorder(10),
+            BorderFactory.createEmptyBorder(5, 5, 5, 5)
+        );
     }
 
     public static void main(String[] CSECU) {
         SwingUtilities.invokeLater(() -> new ImageEncryptor().setVisible(true));
+    }
+}
+
+class RoundedBorder extends AbstractBorder {
+    private int radius;
+
+    RoundedBorder(int radius) {
+        this.radius = radius;
+    }
+
+    @Override
+    public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
+        Graphics2D g2d = (Graphics2D) g.create();
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2d.setColor(c.getForeground());
+        g2d.drawRoundRect(x, y, width - 1, height - 1, radius, radius);
+        g2d.dispose();
     }
 }
